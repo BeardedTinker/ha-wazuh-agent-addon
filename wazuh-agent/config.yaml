@@ -1,6 +1,6 @@
 name: "Wazuh Agent"
 description: "Wazuh Agent add-on for Home Assistant: enrolls an agent and forwards logs to a Wazuh Manager."
-version: "0.2.6.1"
+version: "0.2.6.2"
 slug: "wazuh_agent"
 init: false
 
@@ -20,7 +20,7 @@ options:
   communication_port: 1514
   enrollment_key: ""
   force_reenroll: false
-  debug_dump_config: true
+  debug_dump_config: false
 
 schema:
   manager_address: str
@@ -35,7 +35,7 @@ schema:
 map:
   - config:ro
   - ssl:ro
-  - share:rw
+  - share:ro
   - /run/log/journal:ro
   - /var/log/journal:ro
   - /etc/machine-id:ro

@@ -26,7 +26,7 @@ options:
 schema:
   manager_address: str
   agent_name: str
-  agent_group: str
+  agent_group: "str?"
   enrollment_port: int
   communication_port: int
   enrollment_key: str

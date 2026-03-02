@@ -7,11 +7,17 @@ OPTS="/data/options.json"
 CONF="/var/ossec/etc/ossec.conf"
 LOGFILE="/config/home-assistant.log"
 
+# --- Preconditions ---
 if [ ! -f "$OPTS" ]; then
-  echo "[wazuh-agent] ERROR: options.json not found"
+  echo "[wazuh-agent] ERROR: options.json not found at $OPTS"
+  exit 1
+fi
+if [ ! -f "$CONF" ]; then
+  echo "[wazuh-agent] ERROR: ossec.conf not found at $CONF"
   exit 1
 fi
 
+# --- Read options ---
 MANAGER_ADDRESS="$(jq -r '.manager_address' "$OPTS")"
 AGENT_NAME="$(jq -r '.agent_name' "$OPTS")"
 AGENT_GROUP="$(jq -r '.agent_group // ""' "$OPTS")"
@@ -24,7 +30,7 @@ echo "[wazuh-agent] agent_group=$AGENT_GROUP"
 echo "[wazuh-agent] enrollment_port=$ENROLLMENT_PORT"
 echo "[wazuh-agent] enrollment_key_set=$([ -n "$ENROLLMENT_KEY" ] && echo yes || echo no)"
 
-# Required
+# --- Required validations ---
 if [ -z "$MANAGER_ADDRESS" ] || [ "$MANAGER_ADDRESS" = "null" ]; then
   echo "[wazuh-agent] ERROR: manager_address missing"
   exit 1
@@ -38,25 +44,47 @@ if [ -z "$ENROLLMENT_KEY" ] || [ "$ENROLLMENT_KEY" = "null" ]; then
   exit 1
 fi
 
-# Ensure manager address in config (best-effort)
-if [ -f "$CONF" ]; then
-  sed -i "s|<address>.*</address>|<address>${MANAGER_ADDRESS}</address>|" "$CONF" || true
+# --- Persist Wazuh identity across restarts/updates ---
+# We keep client.keys under /data (persistent) and symlink it into /var/ossec/etc.
+PERSIST_DIR="/data/ossec/etc"
+PERSIST_KEYS="${PERSIST_DIR}/client.keys"
+RUNTIME_KEYS="/var/ossec/etc/client.keys"
+
+mkdir -p "$PERSIST_DIR"
+
+# If runtime keys exist (e.g., from package defaults) and persistent does not, seed persistent once.
+if [ -s "$RUNTIME_KEYS" ] && [ ! -s "$PERSIST_KEYS" ]; then
+  echo "[wazuh-agent] Seeding persistent client.keys from runtime"
+  cp -f "$RUNTIME_KEYS" "$PERSIST_KEYS" || true
 fi
 
+# Force runtime path to be a symlink to persistent storage
+rm -f "$RUNTIME_KEYS"
+ln -sf "$PERSIST_KEYS" "$RUNTIME_KEYS"
+
+# --- Ensure manager address in ossec.conf (best-effort) ---
+# Replace <address>...</address> wherever it exists.
+sed -i "s|<address>.*</address>|<address>${MANAGER_ADDRESS}</address>|" "$CONF" || true
+
 # --- C-mode: disable noisy modules (container != host) ---
-# Disable syscheck/rootcheck/sca (idempotent edits)
-# If blocks exist, flip to no; if not, we don't force-add them here (keeps minimal edits).
+# If these blocks exist, flip disabled to yes.
 for tag in syscheck rootcheck sca; do
   if grep -q "<${tag}>" "$CONF"; then
-    sed -i "0,/<${tag}>/{s/<disabled>no<\/disabled>/<disabled>yes<\/disabled>/}" "$CONF" || true
+    # Flip the first <disabled>no</disabled> inside that block to yes
+    awk -v t="$tag" '
+      BEGIN{inblk=0; done=0}
+      $0 ~ "<"t">" {inblk=1}
+      inblk && !done && $0 ~ "<disabled>no</disabled>" {sub("<disabled>no</disabled>","<disabled>yes</disabled>"); done=1}
+      $0 ~ "</"t">" {inblk=0}
+      {print}
+    ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
   fi
 done
 
 # --- Add HA log localfile (idempotent) ---
 if [ -f "$LOGFILE" ]; then
-  if ! grep -q "$LOGFILE" "$CONF"; then
+  if ! grep -q "<location>${LOGFILE}</location>" "$CONF"; then
     echo "[wazuh-agent] Adding localfile for $LOGFILE"
-    # Insert before closing tag
     awk -v lf="$LOGFILE" '
       /<\/ossec_config>/ && !done {
         print "  <localfile>";
@@ -68,33 +96,24 @@ if [ -f "$LOGFILE" ]; then
       { print }
     ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
   else
-    echo "[wazuh-agent] localfile already present"
+    echo "[wazuh-agent] localfile already present for $LOGFILE"
   fi
 else
   echo "[wazuh-agent] WARNING: $LOGFILE not found (HA log not present yet)"
 fi
 
-mkdir -p /data/ossec/etc
-
-# Persist client.keys across restarts/updates
-if [ -f /var/ossec/etc/client.keys ] && [ ! -L /var/ossec/etc/client.keys ]; then
-  cp -n /var/ossec/etc/client.keys /data/ossec/etc/client.keys || true
-fi
-
-rm -f /var/ossec/etc/client.keys
-ln -s /data/ossec/etc/client.keys /var/ossec/etc/client.keys
-
-# --- Enrollment only if client.keys is missing/empty ---
-KEYS="/var/ossec/etc/client.keys"
-if [ ! -s "$KEYS" ]; then
-  echo "[wazuh-agent] Enrolling agent (no client.keys yet)..."
+# --- Enrollment only if persistent client.keys is empty ---
+if [ ! -s "$PERSIST_KEYS" ]; then
+  echo "[wazuh-agent] Enrolling agent (no persistent client.keys yet)..."
   if [ -n "$AGENT_GROUP" ]; then
+    echo "[wazuh-agent] Enrolling with group: $AGENT_GROUP"
     /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -G "$AGENT_GROUP" -P "$ENROLLMENT_KEY"
   else
+    echo "[wazuh-agent] Enrolling without group"
     /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -P "$ENROLLMENT_KEY"
   fi
 else
-  echo "[wazuh-agent] client.keys exists; skipping enrollment"
+  echo "[wazuh-agent] persistent client.keys exists; skipping enrollment"
 fi
 
 echo "[wazuh-agent] Restarting Wazuh agent..."

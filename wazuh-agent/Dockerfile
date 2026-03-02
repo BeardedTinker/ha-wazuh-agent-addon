@@ -4,7 +4,7 @@ FROM ${BUILD_FROM}
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+  && apt-get install -y --no-install-recommends curl ca-certificates gnupg jq \
   && rm -rf /var/lib/apt/lists/*
 
 COPY run.sh /run.sh

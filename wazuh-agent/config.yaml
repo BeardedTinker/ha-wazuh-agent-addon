@@ -19,14 +19,15 @@ map:
 options:
   manager_address: "192.168.1.39"
   agent_name: "home-assistant"
-  agent_group: "homeassistant"
+  agent_group: ""        # opcionalno
   enrollment_port: 1515
   communication_port: 1514
-  enrollment_key: ""
+  enrollment_key: ""     # obavezno (UI će tražiti)
+
 schema:
   manager_address: str
   agent_name: str
-  agent_group: "str?"
+  agent_group: "str?"    # ✅ opcionalno (nema zvjezdice)
   enrollment_port: int
   communication_port: int
-  enrollment_key: str
+  enrollment_key: str    # ✅ obavezno (ima zvjezdicu)

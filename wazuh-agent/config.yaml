@@ -20,7 +20,13 @@ options:
   manager_address: "192.168.1.39"
   agent_name: "home-assistant"
   agent_group: "homeassistant"
+  enrollment_port: 1515
+  communication_port: 1514
+  enrollment_key: ""
 schema:
   manager_address: str
   agent_name: str
   agent_group: str
+  enrollment_port: int
+  communication_port: int
+  enrollment_key: str

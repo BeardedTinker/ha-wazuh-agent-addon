@@ -30,48 +30,84 @@ if [ -z "$MANAGER_ADDRESS" ] || [ "$MANAGER_ADDRESS" = "null" ]; then
   echo "[wazuh-agent] ERROR: manager_address missing"
   exit 1
 fi
-
 if [ -z "$AGENT_NAME" ] || [ "$AGENT_NAME" = "null" ]; then
   echo "[wazuh-agent] ERROR: agent_name missing"
   exit 1
 fi
-
 if [ -z "$ENROLLMENT_KEY" ] || [ "$ENROLLMENT_KEY" = "null" ]; then
   echo "[wazuh-agent] ERROR: enrollment_key missing"
   exit 1
 fi
 
-# Install Wazuh Agent
-apt-get update
-apt-get install -y wazuh-agent
+##############################################
+# Persistent client.keys MUST be prepared first
+##############################################
+PERSIST_DIR="/data/ossec/etc"
+PERSIST_KEYS="${PERSIST_DIR}/client.keys"
+RUNTIME_KEYS="/var/ossec/etc/client.keys"
 
-# Update manager address
-sed -i "s|<address>.*</address>|<address>${MANAGER_ADDRESS}</address>|" "$CONF"
+mkdir -p "$PERSIST_DIR"
 
-# Disable container-noisy modules
+# If we already have persisted keys, ensure runtime points to them BEFORE any install/start logic
+if [ -s "$PERSIST_KEYS" ]; then
+  echo "[wazuh-agent] Found persisted client.keys"
+else
+  echo "[wazuh-agent] No persisted client.keys yet"
+fi
+
+# Force runtime keys to be a symlink to persisted keys (idempotent)
+rm -f "$RUNTIME_KEYS"
+ln -s "$PERSIST_KEYS" "$RUNTIME_KEYS"
+
+##############################################
+# Install Wazuh Agent (idempotent)
+##############################################
+# Install only if binaries are missing, to avoid resetting configs every start
+if [ ! -x /var/ossec/bin/wazuh-control ]; then
+  echo "[wazuh-agent] Installing Wazuh Agent packages..."
+  apt-get update
+  apt-get install -y --no-install-recommends wazuh-agent
+else
+  echo "[wazuh-agent] Wazuh agent already installed; skipping apt install"
+fi
+
+# Ensure manager address in config
+if [ -f "$CONF" ]; then
+  sed -i "s|<address>.*</address>|<address>${MANAGER_ADDRESS}</address>|" "$CONF" || true
+fi
+
+##############################################
+# Disable container-noisy modules (C-mode)
+##############################################
+# syscheck/rootcheck are noise in container; we keep them off
 for tag in syscheck rootcheck; do
   if grep -q "<${tag}>" "$CONF"; then
-    sed -i "0,/<${tag}>/{s/<disabled>no<\/disabled>/<disabled>yes<\/disabled>/}" "$CONF" || true
+    awk -v t="$tag" '
+      BEGIN{inblk=0; done=0}
+      $0 ~ "<"t">" {inblk=1}
+      inblk && !done && $0 ~ "<disabled>no</disabled>" {sub("<disabled>no</disabled>","<disabled>yes</disabled>"); done=1}
+      $0 ~ "</"t">" {inblk=0}
+      {print}
+    ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
   fi
 done
 
 ##############################################
 # HA LOG INGEST (AUTO: file OR journald)
 ##############################################
-
 add_localfile() {
-  TYPE="$1"
-  VALUE="$2"
-  MARKER="$3"
+  local type="$1"
+  local value="$2"
+  local marker="$3"
 
-  if grep -q "$MARKER" "$CONF"; then
-    echo "[wazuh-agent] HA localfile already configured"
-    return
+  if grep -q "$marker" "$CONF"; then
+    echo "[wazuh-agent] HA localfile already configured ($marker)"
+    return 0
   fi
 
-  echo "[wazuh-agent] Adding HA localfile ($TYPE)"
+  echo "[wazuh-agent] Adding HA localfile ($type)"
 
-  awk -v type="$TYPE" -v val="$VALUE" -v marker="$MARKER" '
+  awk -v type="$type" -v val="$value" -v marker="$marker" '
     /<\/ossec_config>/ && !done {
       print "  <!-- " marker " -->"
       print "  <localfile>"
@@ -85,9 +121,7 @@ add_localfile() {
       done=1
     }
     { print }
-  ' "$CONF" > /tmp/ossec.conf
-
-  mv /tmp/ossec.conf "$CONF"
+  ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
 }
 
 if [ -f "$HA_LOG_FILE" ]; then
@@ -95,7 +129,6 @@ if [ -f "$HA_LOG_FILE" ]; then
   add_localfile "file" "$HA_LOG_FILE" "WAZUH_HA_FILE"
 else
   echo "[wazuh-agent] No HA log file found, using journald"
-
   if command -v journalctl >/dev/null 2>&1; then
     JOURNAL_CMD="journalctl -f -o short-iso CONTAINER_NAME=homeassistant --no-pager"
     add_localfile "command" "$JOURNAL_CMD" "WAZUH_HA_JOURNAL"
@@ -105,26 +138,10 @@ else
 fi
 
 ##############################################
-# Persistent client.keys
+# Enrollment (ONLY if persisted keys missing/empty)
 ##############################################
-
-mkdir -p /data/ossec/etc
-
-if [ -f /var/ossec/etc/client.keys ] && [ ! -L /var/ossec/etc/client.keys ]; then
-  cp -n /var/ossec/etc/client.keys /data/ossec/etc/client.keys || true
-fi
-
-rm -f /var/ossec/etc/client.keys
-ln -s /data/ossec/etc/client.keys /var/ossec/etc/client.keys
-
-KEYS="/data/ossec/etc/client.keys"
-
-##############################################
-# Enrollment (only if not enrolled)
-##############################################
-
-if [ ! -s "$KEYS" ]; then
-  echo "[wazuh-agent] Enrolling agent..."
+if [ ! -s "$PERSIST_KEYS" ]; then
+  echo "[wazuh-agent] Enrolling agent (no persisted client.keys yet)..."
 
   if [ -n "$AGENT_GROUP" ]; then
     /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" \
@@ -138,17 +155,24 @@ if [ ! -s "$KEYS" ]; then
       -A "$AGENT_NAME" \
       -P "$ENROLLMENT_KEY"
   fi
+
+  # agent-auth writes to /var/ossec/etc/client.keys (symlink -> persisted file)
+  if [ -s "$PERSIST_KEYS" ]; then
+    echo "[wazuh-agent] Enrollment succeeded; persisted client.keys created"
+  else
+    echo "[wazuh-agent] ERROR: Enrollment did not create persisted client.keys"
+    exit 1
+  fi
 else
-  echo "[wazuh-agent] Already enrolled"
+  echo "[wazuh-agent] Persisted client.keys exists; skipping enrollment"
 fi
 
 ##############################################
 # Start agent
 ##############################################
-
 echo "[wazuh-agent] Starting Wazuh agent..."
-/var/ossec/bin/wazuh-control start
+/var/ossec/bin/wazuh-control restart || /var/ossec/bin/wazuh-control start || true
 /var/ossec/bin/wazuh-control status || true
 
-echo "[wazuh-agent] Tailing log..."
+echo "[wazuh-agent] Tailing agent log..."
 tail -f /var/ossec/logs/ossec.log

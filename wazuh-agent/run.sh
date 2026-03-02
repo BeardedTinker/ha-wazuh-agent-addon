@@ -149,8 +149,9 @@ ln -s "$PERSIST_KEYS" "$KEYS"
 # ------------------------------------------------------------
 
 if [ ! -s "$PERSIST_KEYS" ]; then
-  echo "[wazuh-agent] Enrolling agent..."
+  echo "[wazuh-agent] No client.keys found, attempting enrollment..."
 
+  set +e
   if [ -n "$AGENT_GROUP" ]; then
     /var/ossec/bin/agent-auth \
       -m "$MANAGER_ADDRESS" \
@@ -164,6 +165,13 @@ if [ ! -s "$PERSIST_KEYS" ]; then
       -p "$ENROLLMENT_PORT" \
       -A "$AGENT_NAME" \
       -P "$ENROLLMENT_KEY"
+  fi
+  ENROLL_EXIT=$?
+  set -e
+
+  if [ $ENROLL_EXIT -ne 0 ]; then
+    echo "[wazuh-agent] Enrollment failed (likely duplicate agent)."
+    echo "[wazuh-agent] Continuing without re-enrollment."
   fi
 else
   echo "[wazuh-agent] client.keys exists, skipping enrollment"

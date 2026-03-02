@@ -154,17 +154,23 @@ fi
 # Debug dump (prints to add-on logs)
 # ----------------------------
 if [[ "$DEBUG_DUMP" == "true" ]]; then
-  log "DEBUG: /var/ossec/etc/client.keys:"
-  ls -la "$KEYS" || true
-  log "DEBUG: persisted client.keys:"
-  ls -la "$PERSIST_KEYS" || true
-  log "DEBUG: /data/ossec/etc listing:"
-  ls -la "$PERSIST_DIR" || true
+  log "DEBUG: options.json:"
+  cat "$OPTS" || true
 
-  log "DEBUG: ossec.conf first 200 lines"
-  sed -n '1,200p' "$CONF" || true
-  log "DEBUG: ossec.conf last 120 lines"
-  tail -n 120 "$CONF" || true
+  log "DEBUG: persisted keys:"
+  ls -la "$PERSIST_DIR" || true
+  wc -c "$PERSIST_KEYS" 2>/dev/null || true
+
+  log "DEBUG: live keys:"
+  ls -la /var/ossec/etc || true
+  wc -c "$KEYS" 2>/dev/null || true
+
+  log "DEBUG: journald mounts:"
+  ls -la /run/log/journal 2>/dev/null || true
+  ls -la /var/log/journal 2>/dev/null || true
+
+  log "DEBUG: ossec.conf grep enrollment/localfile:"
+  grep -nE "<enrollment>|</enrollment>|WAZUH-HA|<localfile>|journald" "$CONF" || true
 fi
 
 # ----------------------------

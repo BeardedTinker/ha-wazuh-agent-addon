@@ -192,3 +192,18 @@ Highlights:
 - No runtime package installs
 - Clean restart behavior
 - Production-ready configuration validation
+
+## License & Upstream Notice
+
+This project (HA Wazuh Agent Add-on) is licensed under the MIT License.
+
+It installs and runs the official Wazuh Agent package provided by Wazuh, Inc.
+
+Wazuh itself is licensed under the GNU General Public License v2 (GPLv2).
+This add-on does not modify, redistribute, or bundle Wazuh source code.
+It only installs the official Wazuh agent package inside a Home Assistant add-on container.
+
+All trademarks and copyrights related to Wazuh belong to their respective owners.
+
+For full Wazuh licensing details, see:
+https://github.com/wazuh/wazuh/blob/main/LICENSE

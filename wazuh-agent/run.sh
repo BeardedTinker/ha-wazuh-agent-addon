@@ -25,11 +25,13 @@ AGENT_GROUP="$(jq -r '.agent_group // ""' "$OPTS")"
 ENROLLMENT_PORT="$(jq -r '.enrollment_port // 1515' "$OPTS")"
 COMM_PORT="$(jq -r '.communication_port // 1514' "$OPTS")"
 ENROLLMENT_KEY="$(jq -r '.enrollment_key // empty' "$OPTS")"
+FORCE_REENROLL="$(jq -r '.force_reenroll // false' "$OPTS")"
 
 echo "[wazuh-agent] manager=${MANAGER_ADDRESS} agent=${AGENT_NAME}"
 echo "[wazuh-agent] enrollment_port=${ENROLLMENT_PORT} comm_port=${COMM_PORT}"
 echo "[wazuh-agent] enrollment_key_set=$([ -n "${ENROLLMENT_KEY}" ] && echo yes || echo no)"
 echo "[wazuh-agent] agent_group=${AGENT_GROUP:-}"
+echo "[wazuh-agent] force_reenroll=${FORCE_REENROLL}"
 
 # -----------------------------
 # Required checks
@@ -56,16 +58,24 @@ if [ ! -f "$CONF" ]; then
 fi
 
 # -----------------------------
+# Ensure persistence dir exists
+# -----------------------------
+mkdir -p "$PERSIST_DIR"
+
+# Optional: force re-enrollment (wipe persisted keys)
+if [ "$FORCE_REENROLL" = "true" ]; then
+  echo "[wazuh-agent] Force re-enroll enabled: wiping persisted client.keys"
+  rm -f "$PERSIST_KEYS"
+fi
+
+# -----------------------------
 # Ensure manager address/ports
 # -----------------------------
-# Best-effort replace <address>...</address> and <port>...</port> in <client> block.
-# We keep it simple and safe.
 sed -i "s|<address>.*</address>|<address>${MANAGER_ADDRESS}</address>|" "$CONF" || true
 sed -i "s|<port>.*</port>|<port>${COMM_PORT}</port>|" "$CONF" || true
 
 # -----------------------------
 # SELF-HEAL: remove invalid <disabled> inside <sca>...</sca>
-# This is exactly what your error indicates.
 # -----------------------------
 if awk 'BEGIN{sca=0;bad=0}
   /<sca>/{sca=1}
@@ -83,9 +93,7 @@ if awk 'BEGIN{sca=0;bad=0}
 fi
 
 # -----------------------------
-# Ensure journald log source (no HA-side changes required)
-# We add ONE journald localfile block if none exists.
-# Include <location>journald</location> to avoid warnings.
+# Ensure journald localfile source (idempotent)
 # -----------------------------
 if grep -q "<log_format>journald</log_format>" "$CONF"; then
   echo "[wazuh-agent] Journald localfile already present"
@@ -104,26 +112,25 @@ else
 fi
 
 # -----------------------------
-# Persist client.keys across restarts/upgrades
+# Key handling (PRODUCTION FIX):
+# - If persisted keys exist: ensure symlink and skip enrollment
+# - Else: enrollment writes to a REAL file at /var/ossec/etc/client.keys
+#   then we copy to persisted location, then create symlink
 # -----------------------------
-mkdir -p "$PERSIST_DIR"
 
-# If first run and keys exist in default location, copy them once
-if [ -f "$KEYS" ] && [ ! -L "$KEYS" ]; then
-  cp -n "$KEYS" "$PERSIST_KEYS" || true
-fi
+if [ -s "$PERSIST_KEYS" ]; then
+  echo "[wazuh-agent] Persisted client.keys found; using it and skipping enrollment"
+  rm -f "$KEYS"
+  ln -s "$PERSIST_KEYS" "$KEYS"
+else
+  echo "[wazuh-agent] No persisted client.keys; enrolling and capturing keys"
 
-# Ensure symlink from /var/ossec/etc/client.keys -> /data/ossec/etc/client.keys
-rm -f "$KEYS"
-ln -s "$PERSIST_KEYS" "$KEYS"
+  # IMPORTANT: do NOT symlink before enrollment
+  rm -f "$KEYS"
+  : > "$KEYS"
+  chmod 600 "$KEYS" || true
 
-# -----------------------------
-# Enrollment (ONLY if no persisted keys)
-# If duplicate agent, we do NOT keep looping; we stop with clear message,
-# because without keys we cannot authenticate anyway.
-# -----------------------------
-if [ ! -s "$PERSIST_KEYS" ]; then
-  echo "[wazuh-agent] Performing enrollment (no client.keys yet)"
+  echo "[wazuh-agent] Performing enrollment"
   set +e
   if [ -n "$AGENT_GROUP" ]; then
     /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -G "$AGENT_GROUP" -P "$ENROLLMENT_KEY"
@@ -142,20 +149,26 @@ if [ ! -s "$PERSIST_KEYS" ]; then
     exit 1
   fi
 
-  # Ensure enrollment wrote keys
-  if [ ! -s "$PERSIST_KEYS" ]; then
-    echo "[wazuh-agent] ERROR: Enrollment reported success but client.keys is still missing."
+  if [ ! -s "$KEYS" ]; then
+    echo "[wazuh-agent] ERROR: Enrollment succeeded but $KEYS is empty/missing (unexpected)."
     exit 1
   fi
-else
-  echo "[wazuh-agent] client.keys exists; skipping enrollment"
+
+  # Copy keys to persistent storage
+  cp -f "$KEYS" "$PERSIST_KEYS"
+  chmod 600 "$PERSIST_KEYS" || true
+
+  # Replace with symlink for future runs
+  rm -f "$KEYS"
+  ln -s "$PERSIST_KEYS" "$KEYS"
+
+  echo "[wazuh-agent] Enrollment complete; client.keys persisted"
 fi
 
 # -----------------------------
 # Start agent
 # -----------------------------
 echo "[wazuh-agent] Starting agent"
-# start is idempotent-ish; if already running, it will just say so.
  /var/ossec/bin/wazuh-control start || true
 
 echo "[wazuh-agent] Status:"

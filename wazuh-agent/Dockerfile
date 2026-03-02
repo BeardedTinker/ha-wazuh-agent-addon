@@ -3,7 +3,9 @@ FROM ${BUILD_FROM}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apk add --no-cache bash curl ca-certificates
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY run.sh /run.sh
 RUN chmod +x /run.sh

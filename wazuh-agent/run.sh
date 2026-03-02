@@ -74,6 +74,16 @@ else
   echo "[wazuh-agent] WARNING: $LOGFILE not found (HA log not present yet)"
 fi
 
+mkdir -p /data/ossec/etc
+
+# Persist client.keys across restarts/updates
+if [ -f /var/ossec/etc/client.keys ] && [ ! -L /var/ossec/etc/client.keys ]; then
+  cp -n /var/ossec/etc/client.keys /data/ossec/etc/client.keys || true
+fi
+
+rm -f /var/ossec/etc/client.keys
+ln -s /data/ossec/etc/client.keys /var/ossec/etc/client.keys
+
 # --- Enrollment only if client.keys is missing/empty ---
 KEYS="/var/ossec/etc/client.keys"
 if [ ! -s "$KEYS" ]; then

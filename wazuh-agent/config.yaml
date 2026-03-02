@@ -1,6 +1,6 @@
 name: "Wazuh Agent"
 description: "Wazuh Agent for forwarding Home Assistant logs to a Wazuh Manager."
-version: "0.2.0"
+version: "0.2.1"
 slug: "wazuh_agent"
 init: false
 

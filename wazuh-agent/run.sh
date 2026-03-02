@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[wazuh-agent] Starting (placeholder)"
-echo "[wazuh-agent] manager_address: ${MANAGER_ADDRESS:-not_set}"
+echo "[wazuh-agent] Starting"
 
-# TODO: install + configure wazuh-agent, enroll to manager, then start service
-# For now, keep container alive so HA doesn't instantly mark it as crashed:
+if [ -f /data/options.json ]; then
+  echo "[wazuh-agent] options.json found"
+  echo "[wazuh-agent] Raw options:"
+  cat /data/options.json
+else
+  echo "[wazuh-agent] options.json NOT found"
+fi
+
+# keep container alive for now
 tail -f /dev/null

@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DEBIAN_FRONTEND=noninteractive
+
 echo "[wazuh-agent] Starting"
 
 OPTS="/data/options.json"
-LOGFILE="/config/home-assistant.log"
+CONF="/var/ossec/etc/ossec.conf"
+KEYS="/var/ossec/etc/client.keys"
 PERSIST_DIR="/data/ossec/etc"
-PERSIST_KEYS="${PERSIST_DIR}/client.keys"
+PERSIST_KEYS="$PERSIST_DIR/client.keys"
+LOGFILE="/config/home-assistant.log"
 
 if [ ! -f "$OPTS" ]; then
   echo "[wazuh-agent] ERROR: options.json not found"
@@ -25,6 +29,10 @@ echo "[wazuh-agent] agent_group=$AGENT_GROUP"
 echo "[wazuh-agent] enrollment_port=$ENROLLMENT_PORT"
 echo "[wazuh-agent] enrollment_key_set=$([ -n "$ENROLLMENT_KEY" ] && echo yes || echo no)"
 
+# ------------------------------------------------------------
+# REQUIRED CHECKS
+# ------------------------------------------------------------
+
 if [ -z "$MANAGER_ADDRESS" ] || [ "$MANAGER_ADDRESS" = "null" ]; then
   echo "[wazuh-agent] ERROR: manager_address missing"
   exit 1
@@ -40,64 +48,82 @@ if [ -z "$ENROLLMENT_KEY" ] || [ "$ENROLLMENT_KEY" = "null" ]; then
   exit 1
 fi
 
-# -------------------------------------------------
-# INSTALL WAZUH AGENT FIRST
-# -------------------------------------------------
-if [ ! -d "/var/ossec" ]; then
+# ------------------------------------------------------------
+# INSTALL WAZUH AGENT (NON-INTERACTIVE SAFE)
+# ------------------------------------------------------------
+
+if [ ! -d /var/ossec ]; then
   echo "[wazuh-agent] Installing Wazuh agent..."
 
   apt-get update
   apt-get install -y curl ca-certificates gnupg jq
 
-  curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
-  echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt stable main" > /etc/apt/sources.list.d/wazuh.list
+  curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH -o /tmp/wazuh.key
+  gpg --batch --yes --dearmor /tmp/wazuh.key
+  mv /tmp/wazuh.key.gpg /usr/share/keyrings/wazuh.gpg
+  rm /tmp/wazuh.key
+
+  echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt stable main" \
+    > /etc/apt/sources.list.d/wazuh.list
 
   apt-get update
   apt-get install -y wazuh-agent
 fi
 
-CONF="/var/ossec/etc/ossec.conf"
+# ------------------------------------------------------------
+# ENSURE CONFIG EXISTS
+# ------------------------------------------------------------
 
-# -------------------------------------------------
-# Patch manager address
-# -------------------------------------------------
+if [ ! -f "$CONF" ]; then
+  echo "[wazuh-agent] ERROR: ossec.conf not found after install"
+  exit 1
+fi
+
+# ------------------------------------------------------------
+# SET MANAGER ADDRESS
+# ------------------------------------------------------------
+
 sed -i "s|<address>.*</address>|<address>${MANAGER_ADDRESS}</address>|" "$CONF"
 
-# -------------------------------------------------
-# Disable host-specific modules
-# -------------------------------------------------
-for tag in syscheck rootcheck; do
+# ------------------------------------------------------------
+# DISABLE HOST-SPECIFIC MODULES (CONTAINER SAFE MODE)
+# ------------------------------------------------------------
+
+for tag in syscheck rootcheck sca syscollector; do
   if grep -q "<${tag}>" "$CONF"; then
     sed -i "0,/<${tag}>/{s/<disabled>no<\/disabled>/<disabled>yes<\/disabled>/}" "$CONF"
   fi
 done
 
-# -------------------------------------------------
-# Add HA log source
-# -------------------------------------------------
-if [ -f "$LOGFILE" ]; then
-  echo "[wazuh-agent] Using HA file log"
-  if ! grep -q "$LOGFILE" "$CONF"; then
+# ------------------------------------------------------------
+# ADD HOME ASSISTANT LOG SOURCE
+# ------------------------------------------------------------
+
+if grep -q "$LOGFILE" "$CONF"; then
+  echo "[wazuh-agent] HA localfile already configured"
+else
+  if [ -f "$LOGFILE" ]; then
+    echo "[wazuh-agent] Adding HA log file source"
+
     awk -v lf="$LOGFILE" '
       /<\/ossec_config>/ && !done {
-        print "  <localfile>";
-        print "    <log_format>syslog</log_format>";
-        print "    <location>" lf "</location>";
-        print "  </localfile>";
+        print "  <localfile>"
+        print "    <log_format>syslog</log_format>"
+        print "    <location>" lf "</location>"
+        print "  </localfile>"
         done=1
       }
       { print }
     ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
-  fi
-else
-  echo "[wazuh-agent] Using journald for HA logs"
-  if ! grep -q "CONTAINER_NAME=homeassistant" "$CONF"; then
+
+  else
+    echo "[wazuh-agent] No HA log file found, using journald"
+
     awk '
       /<\/ossec_config>/ && !done {
-        print "  <localfile>";
-        print "    <log_format>command</log_format>";
-        print "    <command>journalctl -f -o short-iso CONTAINER_NAME=homeassistant --no-pager</command>";
-        print "  </localfile>";
+        print "  <localfile>"
+        print "    <log_format>journald</log_format>"
+        print "  </localfile>"
         done=1
       }
       { print }
@@ -105,37 +131,50 @@ else
   fi
 fi
 
-# -------------------------------------------------
-# Persist keys
-# -------------------------------------------------
+# ------------------------------------------------------------
+# PERSISTENT client.keys
+# ------------------------------------------------------------
+
 mkdir -p "$PERSIST_DIR"
 
-if [ -f /var/ossec/etc/client.keys ] && [ ! -L /var/ossec/etc/client.keys ]; then
-  cp -n /var/ossec/etc/client.keys "$PERSIST_KEYS" || true
+if [ -f "$KEYS" ] && [ ! -L "$KEYS" ]; then
+  cp -n "$KEYS" "$PERSIST_KEYS" || true
 fi
 
-rm -f /var/ossec/etc/client.keys
-ln -sf "$PERSIST_KEYS" /var/ossec/etc/client.keys
+rm -f "$KEYS"
+ln -s "$PERSIST_KEYS" "$KEYS"
 
-# -------------------------------------------------
-# Enrollment only if no key
-# -------------------------------------------------
+# ------------------------------------------------------------
+# ENROLL ONLY IF NO VALID KEYS
+# ------------------------------------------------------------
+
 if [ ! -s "$PERSIST_KEYS" ]; then
   echo "[wazuh-agent] Enrolling agent..."
+
   if [ -n "$AGENT_GROUP" ]; then
-    /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -G "$AGENT_GROUP" -P "$ENROLLMENT_KEY"
+    /var/ossec/bin/agent-auth \
+      -m "$MANAGER_ADDRESS" \
+      -p "$ENROLLMENT_PORT" \
+      -A "$AGENT_NAME" \
+      -G "$AGENT_GROUP" \
+      -P "$ENROLLMENT_KEY"
   else
-    /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -P "$ENROLLMENT_KEY"
+    /var/ossec/bin/agent-auth \
+      -m "$MANAGER_ADDRESS" \
+      -p "$ENROLLMENT_PORT" \
+      -A "$AGENT_NAME" \
+      -P "$ENROLLMENT_KEY"
   fi
 else
-  echo "[wazuh-agent] client.keys exists; skipping enrollment"
+  echo "[wazuh-agent] client.keys exists, skipping enrollment"
 fi
 
-# -------------------------------------------------
-# Start agent
-# -------------------------------------------------
+# ------------------------------------------------------------
+# START AGENT
+# ------------------------------------------------------------
+
 echo "[wazuh-agent] Starting Wazuh agent..."
-/var/ossec/bin/wazuh-control restart || /var/ossec/bin/wazuh-control start
+/var/ossec/bin/wazuh-control start
 
 echo "[wazuh-agent] Tailing log..."
 tail -f /var/ossec/logs/ossec.log

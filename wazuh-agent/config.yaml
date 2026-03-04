@@ -12,10 +12,9 @@ arch:
   - aarch64
   - armv7
 
-# Allow reading host journald (you also mount journal dirs in config)
+# Allow reading host journald (you also mount journal dirs in map)
 journald: true
 
-# Do not pin to a specific HA version
 homeassistant: null
 
 options:
@@ -44,6 +43,6 @@ map:
   - config:ro
   - ssl:ro
   - share:ro
-  - /var/log/journal:ro
   - /run/log/journal:ro
+  - /var/log/journal:ro
   - /etc:ro

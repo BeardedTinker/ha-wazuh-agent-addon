@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.3...v1.0.4) (2026-03-04)
+
+
+### Bug Fixes
+
+* versioning ([6d08a59](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/6d08a5933cd7d8b8812aaf23bfc267f3f52fbc38))
+
 ## [1.0.3](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.2...v1.0.3) (2026-03-04)
 
 

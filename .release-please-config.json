@@ -1,0 +1,12 @@
+{
+  "release-type": "simple",
+  "packages": {
+    ".": {
+      "package-name": "ha-wazuh-agent-addon",
+      "extra-files": [
+        "wazuh-agent/config.yaml",
+        "repository.yaml"
+      ]
+    }
+  }
+}

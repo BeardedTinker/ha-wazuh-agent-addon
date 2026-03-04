@@ -24,13 +24,18 @@ JOURNAL_ROOT="/var/log/journal"
 ensure_machine_id() {
   mkdir -p /data
 
-  # If /etc/machine-id already exists, make sure we also persist it (if missing)
+  # If /etc/machine-id already exists, persist it if missing
   if [[ -s /etc/machine-id ]]; then
     if [[ ! -s "$MACHINE_ID_FILE" ]]; then
-      log "Persisting existing /etc/machine-id into $MACHINE_ID_FILE"
-      head -c 32 /etc/machine-id > "$MACHINE_ID_FILE" || true
-      chmod 0444 "$MACHINE_ID_FILE" || true
+      local cur
+      cur="$(tr -d '\n' < /etc/machine-id | head -c 32 || true)"
+      if [[ "$cur" =~ ^[0-9a-f]{32}$ ]]; then
+        log "Persisting existing /etc/machine-id into $MACHINE_ID_FILE"
+        echo "$cur" > "$MACHINE_ID_FILE"
+        chmod 0444 "$MACHINE_ID_FILE" || true
+      fi
     fi
+
     log "/etc/machine-id exists"
     return 0
   fi
@@ -127,10 +132,12 @@ set_disabled_simple_block() {
 
 # Disable syscollector whether it appears as <syscollector> or <wodle name="syscollector">
 disable_syscollector_any_shape() {
+  # Case A: <syscollector>...</syscollector>
   if grep -q "<syscollector>" "$CONF"; then
     set_disabled_simple_block "syscollector" "yes"
   fi
 
+  # Case B: <wodle name="syscollector">...</wodle>
   if grep -q '<wodle name="syscollector">' "$CONF"; then
     if awk '/<wodle name="syscollector">/{f=1} f&&/<disabled>/{print; exit} /<\/wodle>/{f=0}' "$CONF" | grep -q "<disabled>"; then
       awk '
@@ -157,7 +164,7 @@ disable_syscollector_any_shape() {
   fi
 }
 
-# Remove default "command" localfile collectors (df/netstat/last) — they are noisy in containers
+# Remove default "command" localfile collectors (df/netstat/last) — noisy in containers
 remove_command_collectors() {
   awk '
     BEGIN{inlf=0;buf="";hascmd=0}

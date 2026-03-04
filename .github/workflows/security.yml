@@ -19,8 +19,8 @@ jobs:
       - name: Build image (amd64)
         uses: docker/build-push-action@v6
         with:
-          context: ./wazuh_agent
-          file: ./wazuh_agent/Dockerfile
+          context: ./wazuh-agent
+          file: ./wazuh-agent/Dockerfile
           platforms: linux/amd64
           push: false
           tags: local/ha-wazuh-agent-addon:scan

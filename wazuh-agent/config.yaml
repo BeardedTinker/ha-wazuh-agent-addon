@@ -44,6 +44,6 @@ map:
   - config:ro
   - ssl:ro
   - share:ro
-  - /run/log/journal:ro
   - /var/log/journal:ro
-  - /etc/machine-id:ro
+  - /run/log/journal:ro
+  - /etc:ro

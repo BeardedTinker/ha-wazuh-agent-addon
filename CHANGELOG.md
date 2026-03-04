@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.2...v1.0.3) (2026-03-04)
+
+
+### Bug Fixes
+
+* fixing etc and machine-id in docker ([6190298](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/61902983bfd2130f0aee9032007f19e56646ed80))
+* fixing etc and machine-id in docker ([705488d](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/705488d4d7295ca74428a8906923a11e274d1851))
+
 ## [1.0.2](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.1...v1.0.2) (2026-03-04)
 
 

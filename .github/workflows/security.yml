@@ -19,10 +19,12 @@ jobs:
       - name: Build image (amd64)
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./wazuh_agent
+          file: ./wazuh_agent/Dockerfile
           platforms: linux/amd64
           push: false
           tags: local/ha-wazuh-agent-addon:scan
+          load: true
           build-args: |
             BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
 

@@ -1,5 +1,5 @@
 name: "Wazuh Agent"
-description: "Wazuh Agent add-on for Home Assistant: enrolls an agent and forwards logs to a Wazuh Manager."
+description: "Wazuh Agent add-on for Home Assistant: enrolls an agent and forwards logs to a Wazuh Manager server."
 version: "1.0.3"
 slug: "wazuh_agent"
 

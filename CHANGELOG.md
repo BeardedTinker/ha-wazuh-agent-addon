@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.1...v1.0.2) (2026-03-04)
+
+
+### Bug Fixes
+
+* try to get machine-id ([5a6fab8](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/5a6fab8363d054dd3b27e59ec0a07a2c7a423799))
+
 ## [1.0.1](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.0...v1.0.1) (2026-03-04)
 
 

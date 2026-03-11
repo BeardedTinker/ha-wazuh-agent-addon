@@ -21,7 +21,7 @@ jobs:
         # Note: action-shellcheck fails if no .sh files found; keep run.sh in repo.
 
       - name: Hadolint (Dockerfile)
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: Dockerfile
 

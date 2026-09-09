@@ -90,7 +90,7 @@ This is not meant to replace future HA-native security logging — it complement
 This add-on:
 
 - installs the official Wazuh Agent
-- enrolls it to your Wazuh Manager (`agent-auth`)
+- enrolls it to your Wazuh Manager (`agent-auth`, with or without password)
 - forwards HA logs (prefer `journald`, optionally `/config/home-assistant.log`)
 - persists agent keys in add-on storage (`/data/ossec/etc/client.keys`)
 - prevents auto-enrollment loops (removes `<enrollment>` block from `ossec.conf`)
@@ -217,10 +217,11 @@ Use this only if you understand the implications of scanning inside the HA envir
 - `agent_name`  
   Name shown in Wazuh (example: `home-assistant`)
 
-- `enrollment_key`  
-  Authentication password from your manager (`authd.pass`), used by `agent-auth`
-
 ### Optional
+
+- `enrollment_key`  
+  Authentication password from your manager (`authd.pass`), used by `agent-auth` only when this field is not empty.
+  Leave it empty if your Wazuh Manager allows passwordless enrollment.
 
 - `agent_group`  
   Assign agent to a manager group during enrollment
@@ -242,9 +243,41 @@ Use this only if you understand the implications of scanning inside the HA envir
 - `debug_dump_config` (default: `false`)  
   Prints helpful debug info (ossec.conf head, dir listings). Do not keep enabled long-term.
 
+### Enrollment with password vs without password
+
+The add-on behavior is determined directly by the startup script:
+
+- if `enrollment_key` is not empty, the add-on runs `agent-auth` with `-P <password>`
+- if `enrollment_key` is empty, the add-on does **not** pass `-P`, so enrollment is attempted without a password
+
+That means:
+
+- for passwordless enrollment, you do **not** need to first set a password and then remove it
+- just leave `enrollment_key` empty from the start
+- this only works if your Wazuh Manager is configured to accept enrollment without `authd.pass`
+
+If you already enrolled the agent once, changing `enrollment_key` alone may appear to do nothing. That is expected: the add-on reuses persisted keys from `/data/ossec/etc/client.keys` and only enrolls again when those keys are missing or you force a new enrollment.
+
+### Passwordless enrollment checklist
+
+1. Configure your Wazuh Manager to allow agent enrollment without a password.
+2. In the add-on configuration, set `manager_address` and `agent_name`.
+3. Leave `enrollment_key` empty.
+4. Start the add-on.
+
+If the agent had already been enrolled before:
+
+1. Delete the existing agent entry in Wazuh Manager if needed.
+2. Set `force_reenroll: true`.
+3. Keep `enrollment_key` empty.
+4. Restart the add-on once.
+5. After successful enrollment, set `force_reenroll: false` again.
+
 ---
 
 ## Example config
+
+### With password
 
 ```yaml
 manager_address: "192.168.1.39"
@@ -253,6 +286,20 @@ agent_group: ""
 enrollment_port: 1515
 communication_port: 1514
 enrollment_key: "YOUR_AUTHD_PASS"
+force_reenroll: false
+security_profile: "minimal"
+debug_dump_config: false
+```
+
+### Without password
+
+```yaml
+manager_address: "192.168.1.39"
+agent_name: "home-assistant"
+agent_group: ""
+enrollment_port: 1515
+communication_port: 1514
+enrollment_key: ""
 force_reenroll: false
 security_profile: "minimal"
 debug_dump_config: false
@@ -290,6 +337,8 @@ If persistence is not working:
 This add-on removes `<enrollment>` from `ossec.conf` to prevent `wazuh-agentd` auto-enrollment.
 
 If you manually added enrollment blocks, remove them.
+
+If you want passwordless enrollment, make sure `enrollment_key` is empty. If the add-on was previously enrolled with other credentials, temporarily set `force_reenroll: true` and restart once.
 
 ### Security notes
 

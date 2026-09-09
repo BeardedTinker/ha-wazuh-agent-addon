@@ -215,7 +215,6 @@ log "security_profile=$SECURITY_PROFILE"
 # ----------------------------
 [[ -n "$MANAGER_ADDRESS" ]] || { log "ERROR: manager_address missing"; exit 1; }
 [[ -n "$AGENT_NAME" ]] || { log "ERROR: agent_name missing"; exit 1; }
-[[ -n "$ENROLLMENT_KEY" ]] || { log "ERROR: enrollment_key missing"; exit 1; }
 
 is_port "$ENROLLMENT_PORT" || { log "ERROR: enrollment_port must be 1..65535 (got: $ENROLLMENT_PORT)"; exit 1; }
 is_port "$COMM_PORT" || { log "ERROR: communication_port must be 1..65535 (got: $COMM_PORT)"; exit 1; }
@@ -321,11 +320,11 @@ fi
 if [[ ! -s "$PERSIST_KEYS" ]]; then
   log "No persisted client.keys; enrolling now"
 
-  if [[ -n "$AGENT_GROUP" ]]; then
-    /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -G "$AGENT_GROUP" -P "$ENROLLMENT_KEY"
-  else
-    /var/ossec/bin/agent-auth -m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME" -P "$ENROLLMENT_KEY"
-  fi
+  AUTH_ARGS=(-m "$MANAGER_ADDRESS" -p "$ENROLLMENT_PORT" -A "$AGENT_NAME")
+  [[ -n "$AGENT_GROUP" ]] && AUTH_ARGS+=(-G "$AGENT_GROUP")
+  [[ -n "$ENROLLMENT_KEY" ]] && AUTH_ARGS+=(-P "$ENROLLMENT_KEY")
+
+  /var/ossec/bin/agent-auth "${AUTH_ARGS[@]}"
 
   if [[ -s "$LIVE_KEYS" ]]; then
     log "Enrollment complete; persisting client.keys"

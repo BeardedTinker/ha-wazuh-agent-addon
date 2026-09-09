@@ -34,7 +34,7 @@ schema:
   agent_group: str?
   enrollment_port: int
   communication_port: int
-  enrollment_key: password
+  enrollment_key: password?
   force_reenroll: bool
   security_profile: list(minimal|standard)
   debug_dump_config: bool

@@ -3,7 +3,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -14,21 +15,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: ShellCheck (run.sh)
-      - uses: ludeeus/action-shellcheck@v2
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@v2
         with:
-          scandir: "."
-        # Note: action-shellcheck fails if no .sh files found; keep run.sh in repo.
+          scandir: "./wazuh-agent"
 
-      - name: Hadolint (Dockerfile)
+      - name: Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Dockerfile
+          dockerfile: "./wazuh-agent/Dockerfile"
 
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            platform: linux/amd64
+            build_from: ghcr.io/home-assistant/amd64-base-debian:bookworm
+          - architecture: aarch64
+            platform: linux/arm64
+            build_from: ghcr.io/home-assistant/aarch64-base-debian:bookworm
+          - architecture: armv7
+            platform: linux/arm/v7
+            build_from: ghcr.io/home-assistant/armv7-base-debian:bookworm
+
     steps:
       - uses: actions/checkout@v4
 
@@ -38,12 +50,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build (no push) for amd64 by default; extend later if you want
-      - name: Docker build (amd64)
+      - name: Build ${{ matrix.architecture }}
         uses: docker/build-push-action@v6
         with:
-          context: .
-          platforms: linux/amd64
+          context: ./wazuh-agent
+          file: ./wazuh-agent/Dockerfile
+          platforms: ${{ matrix.platform }}
           push: false
           build-args: |
-            BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
+            BUILD_FROM=${{ matrix.build_from }}

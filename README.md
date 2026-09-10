@@ -195,7 +195,7 @@ Use this only if you understand the implications of scanning inside the HA envir
 
 ## Compatibility
 
-This add-on bundles Wazuh Agent `4.14.7-1` and requires Wazuh Manager `4.14.7` or newer.
+This add-on bundles Wazuh Agent `4.14.4-1` and requires Wazuh Manager `4.14.4` or newer.
 
 Wazuh requires the manager to be the same version as or newer than its connected agents. Verify the manager version before installing or upgrading the add-on. See the [Wazuh compatibility matrix](https://documentation.wazuh.com/current/upgrade-guide/compatibility-matrix/index.html).
 

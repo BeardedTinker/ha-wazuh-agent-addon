@@ -3,6 +3,7 @@
   "release-type": "simple",
   "bump-minor-pre-major": true,
   "include-component-in-tag": false,
+  "pull-request-header": "## Release checklist\n\nBefore merging this release PR:\n\n- [ ] Verify the target Wazuh Manager is the same version or newer than the bundled agent.\n- [ ] Add `Bundled Wazuh Agent: x.y.z-r` to this release's `wazuh-agent/CHANGELOG.md` entry.\n- [ ] Add `Requires Wazuh Manager: x.y.z or newer` to the same release notes.\n",
   "packages": {
     ".": {
       "package-name": "ha-wazuh-agent-addon",

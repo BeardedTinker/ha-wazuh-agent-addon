@@ -21,6 +21,7 @@ Security logging and host visibility for **Home Assistant OS** using **Wazuh**.
 - [Architecture](#architecture)
 - [Security model](#security-model)
 - [Security profiles](#security-profiles)
+- [Compatibility](#compatibility)
 - [Install](#install)
 - [Configuration options](#configuration-options)
 - [Example config](#example-config)
@@ -189,6 +190,14 @@ For advanced users who want more of the Wazuh defaults.
 - still prevents auto-enrollment loops
 
 Use this only if you understand the implications of scanning inside the HA environment.
+
+---
+
+## Compatibility
+
+This add-on bundles Wazuh Agent `4.14.7-1` and requires Wazuh Manager `4.14.7` or newer.
+
+Wazuh requires the manager to be the same version as or newer than its connected agents. Verify the manager version before installing or upgrading the add-on. See the [Wazuh compatibility matrix](https://documentation.wazuh.com/current/upgrade-guide/compatibility-matrix/index.html).
 
 ---
 

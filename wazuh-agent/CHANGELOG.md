@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.8...v1.1.0) (2026-09-10)
+
+- Bundled Wazuh Agent: 4.14.4-1
+- Requires Wazuh Manager: 4.14.4 or newer
+
+### Features
+
+* release passwordless enrollment with deterministic builds ([#33](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/33)) ([ea5fef5](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/ea5fef5ccf3374f4120c8917455e4e38b621ac69))
+
+
+### Bug Fixes
+
+* **ci:** validate add-on and all architectures ([ea5fef5](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/ea5fef5ccf3374f4120c8917455e4e38b621ac69))
+
 ## [1.0.8](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.7...v1.0.8) (2026-03-04)
 
 

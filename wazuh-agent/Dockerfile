@@ -6,7 +6,7 @@ ARG BUILD_ARCH
 ARG BUILD_VERSION
 
 # renovate: datasource=deb depName=wazuh-agent versioning=deb
-ARG WAZUH_AGENT_VERSION=4.14.7-1
+ARG WAZUH_AGENT_VERSION=4.14.4-1
 
 ENV DEBIAN_FRONTEND=noninteractive
 

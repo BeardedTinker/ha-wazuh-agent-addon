@@ -10,9 +10,8 @@
       "changelog-path": "wazuh-agent/CHANGELOG.md",
       "extra-files": [
         {
-          "type": "yaml",
-          "path": "wazuh-agent/config.yaml",
-          "jsonpath": "$.version"
+          "type": "generic",
+          "path": "wazuh-agent/config.yaml"
         }
       ]
     }

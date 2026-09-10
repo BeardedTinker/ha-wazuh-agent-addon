@@ -3,10 +3,12 @@ name: Release Please
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -17,28 +19,9 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - name: API sanity check (whoami + rate limit)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          echo "== GitHub API URL =="
-          echo "${GITHUB_API_URL}"
-          echo "== Who am I =="
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
-            "${GITHUB_API_URL}/user" | head -c 500 || true
-          echo
-          echo "== Rate limit =="
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
-            "${GITHUB_API_URL}/rate_limit" | head -c 2000 || true
-          echo
-
-      - name: Run release-please
+      - name: Run Release Please
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          release-type: simple
-          package-name: ha-wazuh-agent-addon
-          extra-files: |
-            wazuh-agent/config.yaml
-            repository.yaml
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: release-please-manifest.json

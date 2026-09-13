@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.2](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.1.1...v1.1.2) (2026-09-13)
+
+- Bundled Wazuh Agent: 4.14.4-1
+- Requires Wazuh Manager: 4.14.4 or newer
+
+### Bug Fixes
+
+* move base image selection into Dockerfile ([7c4d4de](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/7c4d4de66eaf0cb044910e19242b699ab8076438))
+* update Trivy security action ([85986f0](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/85986f035420fd13bc56b60c32f7177900c6389d))
+
 ## [1.1.1](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.1.0...v1.1.1) (2026-09-13)
 
 - Bundled Wazuh Agent: 4.14.4-1

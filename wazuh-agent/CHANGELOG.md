@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.1.0...v1.1.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* remove redundant add-on default ([479ad00](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/479ad002d4abfdc8d692082daaa4e671812a0cb5))
+* update add-on manifest for current Supervisor ([d3883cc](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/d3883cc81fdcd28a7d715e1e7ab5153a985c6a81))
+
 ## [1.1.0](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.0.8...v1.1.0) (2026-09-10)
 
 - Bundled Wazuh Agent: 4.14.4-1

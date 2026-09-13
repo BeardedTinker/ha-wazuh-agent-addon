@@ -38,10 +38,8 @@ jobs:
         include:
           - architecture: amd64
             platform: linux/amd64
-            build_from: ghcr.io/home-assistant/amd64-base-debian:bookworm
           - architecture: aarch64
             platform: linux/arm64
-            build_from: ghcr.io/home-assistant/aarch64-base-debian:bookworm
 
     steps:
       - uses: actions/checkout@v4
@@ -60,4 +58,4 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: false
           build-args: |
-            BUILD_FROM=${{ matrix.build_from }}
+            BUILD_ARCH=${{ matrix.architecture }}

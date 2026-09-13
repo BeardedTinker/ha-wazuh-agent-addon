@@ -1,6 +1,6 @@
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
+ARG BUILD_ARCH=amd64
 # hadolint ignore=DL3006
-FROM ${BUILD_FROM}
+FROM ghcr.io/home-assistant/${BUILD_ARCH}-base-debian:bookworm
 
 ARG BUILD_ARCH
 ARG BUILD_VERSION

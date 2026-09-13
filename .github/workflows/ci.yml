@@ -25,6 +25,11 @@ jobs:
         with:
           dockerfile: "./wazuh-agent/Dockerfile"
 
+      - name: Home Assistant add-on linter
+        uses: frenck/action-addon-linter@v2.21
+        with:
+          path: "./wazuh-agent"
+
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -37,9 +42,6 @@ jobs:
           - architecture: aarch64
             platform: linux/arm64
             build_from: ghcr.io/home-assistant/aarch64-base-debian:bookworm
-          - architecture: armv7
-            platform: linux/arm/v7
-            build_from: ghcr.io/home-assistant/armv7-base-debian:bookworm
 
     steps:
       - uses: actions/checkout@v4

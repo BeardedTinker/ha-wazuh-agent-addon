@@ -10,12 +10,9 @@ boot: auto
 arch:
   - amd64
   - aarch64
-  - armv7
 
-# Allow reading host journald (you also mount journal dirs in map)
+# Allow read-only access to the host journal.
 journald: true
-
-homeassistant: null
 
 options:
   manager_address: ""
@@ -40,9 +37,10 @@ schema:
   debug_dump_config: bool
 
 map:
-  - config:ro
-  - ssl:ro
-  - share:ro
-  - /run/log/journal:ro
-  - /var/log/journal:ro
-  - /etc:ro
+  - type: homeassistant_config
+    read_only: true
+    path: /config
+  - type: ssl
+    read_only: true
+  - type: share
+    read_only: true

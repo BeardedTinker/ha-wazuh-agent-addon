@@ -15,7 +15,6 @@ PERSIST_KEYS="${PERSIST_DIR}/client.keys"
 LOGFILE="/config/home-assistant.log"
 
 MACHINE_ID_FILE="/data/machine-id"
-JOURNAL_ROOT="/var/log/journal"
 
 # ----------------------------
 # Ensure /etc/machine-id exists (needed for journald in containers)
@@ -47,12 +46,16 @@ ensure_machine_id() {
     return 0
   fi
 
-  # 2) Try infer from journald directory name: /var/log/journal/<machineid>
+  # 2) Try infer from the persistent or runtime journald directory name.
   local inferred=""
-  if [[ -d "$JOURNAL_ROOT" ]]; then
-    inferred="$(find "$JOURNAL_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
-      | grep -E '^[0-9a-f]{32}$' | head -n 1 || true)"
-  fi
+  local journal_root
+  for journal_root in /var/log/journal /run/log/journal; do
+    if [[ -d "$journal_root" ]]; then
+      inferred="$(find "$journal_root" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+        | grep -E '^[0-9a-f]{32}$' | head -n 1 || true)"
+      [[ -n "$inferred" ]] && break
+    fi
+  done
 
   if [[ -n "$inferred" ]]; then
     log "Inferred machine-id from journald dir: $inferred"

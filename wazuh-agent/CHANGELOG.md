@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.1.2...v1.1.3) (2026-09-15)
+
+
+### Bug Fixes
+
+* harden Wazuh agent lifecycle ([0639b1d](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/0639b1d40cf5f7f5fda601b40a87ca65b9e08486))
+* reduce inherited image vulnerabilities ([e9deb72](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/e9deb7252832b678aa00875d3d01c4beb615ed34))
+
 ## [1.1.2](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.1.1...v1.1.2) (2026-09-13)
 
 - Bundled Wazuh Agent: 4.14.4-1

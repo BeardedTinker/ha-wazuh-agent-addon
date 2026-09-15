@@ -39,7 +39,3 @@ map:
   - type: homeassistant_config
     read_only: true
     path: /config
-  - type: ssl
-    read_only: true
-  - type: share
-    read_only: true

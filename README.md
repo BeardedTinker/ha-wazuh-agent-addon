@@ -1,6 +1,6 @@
 ![GitHub Release](https://img.shields.io/github/v/release/BeardedTinker/ha-wazuh-agent-addon)
 ![License](https://img.shields.io/github/license/BeardedTinker/ha-wazuh-agent-addon)
-![Build](https://img.shields.io/github/actions/workflow/status/BeardedTinker/ha-wazuh-agent-addon/build-addon.yml)
+![Build](https://img.shields.io/github/actions/workflow/status/BeardedTinker/ha-wazuh-agent-addon/ci.yml)
 
 # HA Wazuh Agent Add-on
 
@@ -173,9 +173,7 @@ Recommended for most HA installations.
   - `syscheck` (FIM)
   - `rootcheck`
   - `syscollector`
-- disables:
-  - `agent-upgrade`
-  - command collectors (`df`, `netstat`, `last`)
+- disables command collectors (`df`, `netstat`, `last`)
 - keeps:
   - HA log forwarding
   - SCA (lightweight baseline check)
@@ -250,7 +248,7 @@ Wazuh requires the manager to be the same version as or newer than its connected
   - `standard`: keep Wazuh defaults, still prevents auto-enrollment loop
 
 - `debug_dump_config` (default: `false`)  
-  Prints helpful debug info (ossec.conf head, dir listings). Do not keep enabled long-term.
+  Prints key file sizes and selected `ossec.conf` lines. Do not keep enabled long-term.
 
 ### Enrollment with password vs without password
 

@@ -4,6 +4,49 @@ export DEBIAN_FRONTEND=noninteractive
 
 log() { echo "[wazuh-agent] $*"; }
 
+WAZUH_CONTROL="${WAZUH_CONTROL:-/var/ossec/bin/wazuh-control}"
+
+agent_is_running() {
+  local status
+  status="$("$WAZUH_CONTROL" status 2>/dev/null)" || return 1
+  grep -q "wazuh-agentd is running" <<< "$status" \
+    && grep -q "wazuh-logcollector is running" <<< "$status"
+}
+
+start_agent() {
+  log "Starting agent"
+  if agent_is_running; then
+    "$WAZUH_CONTROL" restart
+  else
+    "$WAZUH_CONTROL" start
+  fi
+
+  if ! agent_is_running; then
+    log "ERROR: Wazuh agent failed to start"
+    "$WAZUH_CONTROL" status || true
+    return 1
+  fi
+}
+
+copy_client_keys() {
+  local source="$1"
+  local destination="$2"
+  local action="$3"
+
+  if ! cp -f "$source" "$destination"; then
+    log "ERROR: Unable to $action client.keys"
+    return 1
+  fi
+}
+
+shutdown() {
+  trap - INT TERM
+  log "Stopping agent"
+  [[ -z "${TAIL_PID:-}" ]] || kill "$TAIL_PID" 2>/dev/null || true
+  "$WAZUH_CONTROL" stop || true
+  exit 0
+}
+
 OPTS="/data/options.json"
 
 CONF="/var/ossec/etc/ossec.conf"
@@ -78,9 +121,6 @@ ensure_machine_id() {
   chmod 0444 "$MACHINE_ID_FILE" || true
   install -m 0444 -o root -g root "$MACHINE_ID_FILE" /etc/machine-id
 }
-
-ensure_machine_id
-log "machine-id: $(head -c 32 /etc/machine-id 2>/dev/null || echo missing)"
 
 # ----------------------------
 # Helpers
@@ -185,6 +225,13 @@ remove_command_collectors() {
   ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
 }
 
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
+
+ensure_machine_id
+log "machine-id: $(head -c 32 /etc/machine-id 2>/dev/null || echo missing)"
+
 # ----------------------------
 # Read options
 # ----------------------------
@@ -246,7 +293,7 @@ chown root:wazuh "$PERSIST_KEYS" 2>/dev/null || true
 
 if [[ -s "$PERSIST_KEYS" ]]; then
   log "Persisted client.keys exists; restoring into $LIVE_KEYS"
-  cp -f "$PERSIST_KEYS" "$LIVE_KEYS" || true
+  copy_client_keys "$PERSIST_KEYS" "$LIVE_KEYS" "restore persisted"
   chmod 640 "$LIVE_KEYS" || true
   chown root:wazuh "$LIVE_KEYS" 2>/dev/null || true
 fi
@@ -331,7 +378,7 @@ if [[ ! -s "$PERSIST_KEYS" ]]; then
 
   if [[ -s "$LIVE_KEYS" ]]; then
     log "Enrollment complete; persisting client.keys"
-    cp -f "$LIVE_KEYS" "$PERSIST_KEYS" || true
+    copy_client_keys "$LIVE_KEYS" "$PERSIST_KEYS" "persist"
     chmod 640 "$PERSIST_KEYS" || true
     chown root:wazuh "$PERSIST_KEYS" 2>/dev/null || true
   else
@@ -355,15 +402,26 @@ fi
 # ----------------------------
 # Start agent
 # ----------------------------
-log "Starting agent"
-if /var/ossec/bin/wazuh-control status >/dev/null 2>&1; then
-  /var/ossec/bin/wazuh-control restart || true
-else
-  /var/ossec/bin/wazuh-control start || true
-fi
+start_agent
 
 log "Status:"
-/var/ossec/bin/wazuh-control status || true
+"$WAZUH_CONTROL" status
 
 log "Tailing log..."
-tail -f /var/ossec/logs/ossec.log
+trap shutdown INT TERM
+tail -F /var/ossec/logs/ossec.log &
+TAIL_PID=$!
+
+while kill -0 "$TAIL_PID" 2>/dev/null; do
+  sleep 30 &
+  wait $!
+  if ! agent_is_running; then
+    log "ERROR: Wazuh agent stopped unexpectedly"
+    kill "$TAIL_PID" 2>/dev/null || true
+    wait "$TAIL_PID" 2>/dev/null || true
+    exit 1
+  fi
+done
+
+log "ERROR: Wazuh log tail stopped unexpectedly"
+wait "$TAIL_PID"

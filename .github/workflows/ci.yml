@@ -30,6 +30,9 @@ jobs:
         with:
           path: "./wazuh-agent"
 
+      - name: Shell regression tests
+        run: bash ./tests/run-tests.sh
+
   build:
     runs-on: ubuntu-latest
     strategy:

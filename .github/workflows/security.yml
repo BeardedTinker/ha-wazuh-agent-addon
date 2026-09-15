@@ -14,29 +14,46 @@ permissions:
 jobs:
   trivy:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            platform: linux/amd64
+          - architecture: aarch64
+            platform: linux/arm64
     steps:
       - uses: actions/checkout@v4
-      - name: Build image (amd64)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (${{ matrix.architecture }})
         uses: docker/build-push-action@v6
         with:
           context: ./wazuh-agent
           file: ./wazuh-agent/Dockerfile
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           push: false
-          tags: local/ha-wazuh-agent-addon:scan
+          tags: local/ha-wazuh-agent-addon:scan-${{ matrix.architecture }}
           load: true
           build-args: |
-            BUILD_ARCH=amd64
+            BUILD_ARCH=${{ matrix.architecture }}
 
       - name: Trivy scan (SARIF)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: local/ha-wazuh-agent-addon:scan
+          image-ref: local/ha-wazuh-agent-addon:scan-${{ matrix.architecture }}
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
+          exit-code: "1"
 
       - name: Upload SARIF to GitHub Security
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
+          category: trivy-${{ matrix.architecture }}

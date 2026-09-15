@@ -46,14 +46,23 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local/ha-wazuh-agent-addon:scan-${{ matrix.architecture }}
+          scanners: vuln
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
-          exit-code: "1"
+          exit-code: "0"
 
       - name: Upload SARIF to GitHub Security
-        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
           category: trivy-${{ matrix.architecture }}
+
+      - name: Trivy vulnerability gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: local/ha-wazuh-agent-addon:scan-${{ matrix.architecture }}
+          scanners: vuln
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "1"

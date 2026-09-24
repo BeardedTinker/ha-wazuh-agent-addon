@@ -139,6 +139,12 @@ is_port() {
   return 0
 }
 
+is_manager_address() {
+  local address="$1"
+  (( ${#address} >= 1 && ${#address} <= 255 )) || return 1
+  [[ "$address" =~ ^[A-Za-z0-9:][A-Za-z0-9._:%-]*$ ]]
+}
+
 # Disable/enable <syscheck> / <rootcheck> blocks safely
 set_disabled_simple_block() {
   local tag="$1"
@@ -252,6 +258,16 @@ FORCE_REENROLL="$(jq -r '.force_reenroll // false' "$OPTS")"
 DEBUG_DUMP="$(jq -r '.debug_dump_config // false' "$OPTS")"
 SECURITY_PROFILE="$(jq -r '.security_profile // "minimal"' "$OPTS")"
 
+# ----------------------------
+# Validation
+# ----------------------------
+[[ -n "$MANAGER_ADDRESS" ]] || { log "ERROR: manager_address missing"; exit 1; }
+[[ -n "$AGENT_NAME" ]] || { log "ERROR: agent_name missing"; exit 1; }
+
+is_manager_address "$MANAGER_ADDRESS" || { log "ERROR: manager_address contains unsupported characters or is too long"; exit 1; }
+is_port "$ENROLLMENT_PORT" || { log "ERROR: enrollment_port must be 1..65535 (got: $ENROLLMENT_PORT)"; exit 1; }
+is_port "$COMM_PORT" || { log "ERROR: communication_port must be 1..65535 (got: $COMM_PORT)"; exit 1; }
+
 log "Starting"
 log "manager=$MANAGER_ADDRESS agent=$AGENT_NAME"
 log "enrollment_port=$ENROLLMENT_PORT comm_port=$COMM_PORT"
@@ -259,15 +275,6 @@ log "enrollment_key_set=$([[ -n "$ENROLLMENT_KEY" ]] && echo yes || echo no)"
 log "agent_group=$AGENT_GROUP"
 log "force_reenroll=$FORCE_REENROLL debug_dump_config=$DEBUG_DUMP"
 log "security_profile=$SECURITY_PROFILE"
-
-# ----------------------------
-# Validation
-# ----------------------------
-[[ -n "$MANAGER_ADDRESS" ]] || { log "ERROR: manager_address missing"; exit 1; }
-[[ -n "$AGENT_NAME" ]] || { log "ERROR: agent_name missing"; exit 1; }
-
-is_port "$ENROLLMENT_PORT" || { log "ERROR: enrollment_port must be 1..65535 (got: $ENROLLMENT_PORT)"; exit 1; }
-is_port "$COMM_PORT" || { log "ERROR: communication_port must be 1..65535 (got: $COMM_PORT)"; exit 1; }
 
 # ----------------------------
 # Sanity: wazuh installed

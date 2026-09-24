@@ -16,6 +16,32 @@ if is_port 0 || is_port 65536 || is_port invalid; then
   fail "invalid ports were accepted"
 fi
 
+for address in \
+  192.168.1.10 \
+  wazuh-manager.local \
+  2001:db8::1 \
+  fe80::1%eth0; do
+  if ! is_manager_address "$address"; then
+    fail "valid manager address was rejected: $address"
+  fi
+done
+
+for address in \
+  "" \
+  "manager address" \
+  'manager&other' \
+  'manager|other' \
+  '<manager>' \
+  '$(id)'; do
+  if is_manager_address "$address"; then
+    fail "unsafe manager address was accepted: $address"
+  fi
+done
+
+if is_manager_address "$(printf 'a%.0s' {1..256})"; then
+  fail "overlong manager address was accepted"
+fi
+
 TEST_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEST_DIR"' EXIT
 export MOCK_STATE="$TEST_DIR/state"

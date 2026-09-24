@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.0...v1.2.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* validate Wazuh manager address ([79cc388](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/79cc388301216964b91a459dd2fa620ff1ec069f))
+
 ## [1.2.0](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.1.3...v1.2.0) (2026-09-21)
 
 - Bundled Wazuh Agent: 4.14.7-1

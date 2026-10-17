@@ -2,6 +2,8 @@
 
 ## [1.2.3](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.2...v1.2.3) (2026-10-17)
 
+- Bundled Wazuh Agent: 4.14.9-1
+- Requires Wazuh Manager: 4.14.9 or newer
 
 ### Bug Fixes
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.3...v1.2.4) (2026-11-11)
+
+
+### Bug Fixes
+
+* **release:** classify Wazuh Agent updates as releasable ([#52](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/52)) ([ff95701](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/ff9570121f731953333c3f7fd2136320ed0c33e1))
+
 ## [1.2.3](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.2...v1.2.3) (2026-10-17)
 
 - Bundled Wazuh Agent: 4.14.9-1

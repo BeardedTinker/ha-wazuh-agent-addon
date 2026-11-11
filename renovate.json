@@ -21,6 +21,8 @@
       "matchDepNames": [
         "wazuh-agent"
       ],
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps",
       "automerge": false
     }
   ]

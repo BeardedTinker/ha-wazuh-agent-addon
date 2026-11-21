@@ -96,7 +96,7 @@ This add-on:
 - enrolls it to your Wazuh Manager (`agent-auth`, with or without password)
 - forwards HA logs (prefer `journald`, optionally `/config/home-assistant.log`)
 - persists agent keys in add-on storage (`/data/ossec/etc/client.keys`)
-- prevents auto-enrollment loops (removes `<enrollment>` block from `ossec.conf`)
+- prevents auto-enrollment loops (replaces `<enrollment>` with an explicitly disabled block)
 - offers a low-noise **minimal** profile tuned for HA OS
 
 It does **not**:
@@ -343,9 +343,10 @@ If persistence is not working:
 
 ### Agent keeps trying to enroll again (invalid password)
 
-This add-on removes `<enrollment>` from `ossec.conf` to prevent `wazuh-agentd` auto-enrollment.
+This add-on replaces `<enrollment>` with an explicit `<enabled>no</enabled>` block
+to prevent `wazuh-agentd` auto-enrollment.
 
-If you manually added enrollment blocks, remove them.
+If you manually added enrollment settings, the add-on replaces them at startup.
 
 If you want passwordless enrollment, make sure `enrollment_key` is empty. If the add-on was previously enrolled with other credentials, temporarily set `force_reenroll: true` and restart once.
 

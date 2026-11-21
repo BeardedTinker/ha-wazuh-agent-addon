@@ -117,4 +117,67 @@ if copy_client_keys "$TEST_DIR/source.keys" "$TEST_DIR/missing/destination.keys"
   fail "client.keys copy failure was ignored"
 fi
 
+CONF="$TEST_DIR/ossec.conf"
+cat > "$CONF" <<'EOF'
+<ossec_config>
+  <client>
+    <server>
+      <address>wazuh-manager.local</address>
+    </server>
+    <enrollment>
+      <enabled>yes</enabled>
+      <agent_name>container-hostname</agent_name>
+    </enrollment>
+  </client>
+  <localfile>
+    <log_format>journald</log_format>
+    <location>journald</location>
+  </localfile>
+</ossec_config>
+EOF
+
+disable_auto_enrollment
+enrollment_line="$(grep -n '<enrollment>' "$CONF" | cut -d: -f1)"
+client_close_line="$(grep -n '</client>' "$CONF" | cut -d: -f1)"
+if [[ "$(grep -c '<enrollment>' "$CONF")" -ne 1 ]] \
+  || ! grep -q '<enabled>no</enabled>' "$CONF" \
+  || grep -q '<enabled>yes</enabled>' "$CONF" \
+  || grep -q 'container-hostname' "$CONF" \
+  || ! grep -q '<location>journald</location>' "$CONF" \
+  || (( enrollment_line >= client_close_line )); then
+  fail "auto-enrollment was not explicitly disabled while preserving other config"
+fi
+
+cat > "$CONF" <<'EOF'
+<ossec_config>
+  <client>
+    <server>
+      <address>wazuh-manager.local</address>
+    </server>
+  </client>
+</ossec_config>
+EOF
+
+disable_auto_enrollment
+disable_auto_enrollment
+if [[ "$(grep -c '<enrollment>' "$CONF")" -ne 1 ]] \
+  || [[ "$(grep -c '<enabled>no</enabled>' "$CONF")" -ne 1 ]] \
+  || ! grep -q '<address>wazuh-manager.local</address>' "$CONF"; then
+  fail "explicit auto-enrollment disable was not added idempotently"
+fi
+
+cat > "$CONF" <<'EOF'
+<ossec_config>
+  <localfile>
+    <log_format>journald</log_format>
+    <location>journald</location>
+  </localfile>
+</ossec_config>
+EOF
+cp "$CONF" "$TEST_DIR/ossec.before"
+if disable_auto_enrollment >/dev/null 2>&1 \
+  || ! cmp -s "$CONF" "$TEST_DIR/ossec.before"; then
+  fail "missing client block did not fail safely"
+fi
+
 echo "All Wazuh Agent shell tests passed"

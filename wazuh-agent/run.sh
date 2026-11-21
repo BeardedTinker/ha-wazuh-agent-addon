@@ -231,6 +231,46 @@ remove_command_collectors() {
   ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
 }
 
+disable_auto_enrollment() {
+  local tmp
+  local enrollment_count
+  local disabled_count
+  tmp="$(mktemp /tmp/ossec.conf.XXXXXX)"
+
+  awk '
+    BEGIN{skip=0;done=0}
+    /<enrollment>/{
+      if ($0 ~ /<\/enrollment>/) {
+        next
+      }
+      skip=1
+      next
+    }
+    skip && /<\/enrollment>/{
+      skip=0
+      next
+    }
+    skip{next}
+    /<\/client>/ && !done {
+      print "    <enrollment>"
+      print "      <enabled>no</enabled>"
+      print "    </enrollment>"
+      done=1
+    }
+    {print}
+  ' "$CONF" > "$tmp"
+
+  enrollment_count="$(grep -c '<enrollment>' "$tmp" || true)"
+  disabled_count="$(grep -c '<enabled>no</enabled>' "$tmp" || true)"
+  if [[ "$enrollment_count" -ne 1 || "$disabled_count" -ne 1 ]]; then
+    log "ERROR: Unable to explicitly disable automatic enrollment"
+    rm -f "$tmp"
+    return 1
+  fi
+
+  mv "$tmp" "$CONF"
+}
+
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
   return 0
 fi
@@ -347,17 +387,10 @@ else
 fi
 
 # ----------------------------
-# Disable auto-enrollment block (critical)
+# Explicitly disable auto-enrollment (critical)
 # ----------------------------
-if grep -q "<enrollment>" "$CONF"; then
-  log "Disabling <enrollment> block in ossec.conf"
-  awk '
-    BEGIN{skip=0}
-    /<enrollment>/{skip=1; next}
-    /<\/enrollment>/{skip=0; next}
-    { if(!skip) print }
-  ' "$CONF" > /tmp/ossec.conf && mv /tmp/ossec.conf "$CONF"
-fi
+log "Disabling automatic enrollment in ossec.conf"
+disable_auto_enrollment
 
 # ----------------------------
 # Apply security profile

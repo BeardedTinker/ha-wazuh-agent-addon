@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.6](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.5...v1.2.6) (2026-11-25)
+
+- Bundled Wazuh Agent: 4.14.10-1
+- Requires Wazuh Manager: 4.14.10 or newer
+
+### Bug Fixes
+
+* preserve ossec.conf permissions ([#61](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/61)) ([1d51fb9](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/1d51fb93cdd2e93c9724e7716802121c7542cb73)), closes [#59](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/59)
+
+### Contributors
+
+* Co-authored with [@cyclingroo](https://github.com/cyclingroo), who reported the regression, identified the root cause, and proposed preserving the expected file metadata.
+* Thanks to [@sloslacker](https://github.com/sloslacker) for independently confirming the profile-specific workaround.
+
 ## [1.2.5](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.4...v1.2.5) (2026-11-21)
 
 - Bundled Wazuh Agent: 4.14.10-1

@@ -235,6 +235,10 @@ disable_auto_enrollment() {
   local tmp
   local enrollment_count
   local disabled_count
+  local conf_mode
+  local conf_owner
+  conf_mode="$(stat -c '%a' "$CONF")"
+  conf_owner="$(stat -c '%u:%g' "$CONF")"
   tmp="$(mktemp /tmp/ossec.conf.XXXXXX)"
 
   awk '
@@ -268,6 +272,8 @@ disable_auto_enrollment() {
     return 1
   fi
 
+  chmod "$conf_mode" "$tmp"
+  chown "$conf_owner" "$tmp"
   mv "$tmp" "$CONF"
 }
 

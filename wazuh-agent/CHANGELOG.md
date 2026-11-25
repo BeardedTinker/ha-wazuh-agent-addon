@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.5...v1.2.6) (2026-11-25)
+
+
+### Bug Fixes
+
+* preserve ossec.conf permissions ([#61](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/61)) ([1d51fb9](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/1d51fb93cdd2e93c9724e7716802121c7542cb73)), closes [#59](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/59)
+
 ## [1.2.5](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.4...v1.2.5) (2026-11-21)
 
 - Bundled Wazuh Agent: 4.14.10-1

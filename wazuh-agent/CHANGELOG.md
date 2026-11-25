@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.5](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.4...v1.2.5) (2026-11-21)
+
+- Bundled Wazuh Agent: 4.14.10-1
+- Requires Wazuh Manager: 4.14.10 or newer
+
+### Bug Fixes
+
+* explicitly disable automatic enrollment ([#55](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/55)) ([d8890b6](https://github.com/BeardedTinker/ha-wazuh-agent-addon/commit/d8890b6f863c853b64aca1b49f54dee702a0b86f)), closes [#54](https://github.com/BeardedTinker/ha-wazuh-agent-addon/issues/54)
+
+### Contributors
+
+* Co-authored with [@brianjeden](https://github.com/brianjeden), who reported the bug, identified the root cause, and proposed the fix.
+
 ## [1.2.4](https://github.com/BeardedTinker/ha-wazuh-agent-addon/compare/v1.2.3...v1.2.4) (2026-11-11)
 
 - Bundled Wazuh Agent: 4.14.10-1

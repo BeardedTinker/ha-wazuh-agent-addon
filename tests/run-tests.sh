@@ -135,6 +135,8 @@ cat > "$CONF" <<'EOF'
   </localfile>
 </ossec_config>
 EOF
+chmod 0640 "$CONF"
+conf_owner_before="$(stat -c '%u:%g' "$CONF")"
 
 disable_auto_enrollment
 enrollment_line="$(grep -n '<enrollment>' "$CONF" | cut -d: -f1)"
@@ -144,8 +146,10 @@ if [[ "$(grep -c '<enrollment>' "$CONF")" -ne 1 ]] \
   || grep -q '<enabled>yes</enabled>' "$CONF" \
   || grep -q 'container-hostname' "$CONF" \
   || ! grep -q '<location>journald</location>' "$CONF" \
+  || [[ "$(stat -c '%a' "$CONF")" != "640" ]] \
+  || [[ "$(stat -c '%u:%g' "$CONF")" != "$conf_owner_before" ]] \
   || (( enrollment_line >= client_close_line )); then
-  fail "auto-enrollment was not explicitly disabled while preserving other config"
+  fail "auto-enrollment rewrite did not preserve config contents and metadata"
 fi
 
 cat > "$CONF" <<'EOF'

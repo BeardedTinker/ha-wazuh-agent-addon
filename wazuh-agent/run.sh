@@ -14,6 +14,7 @@ agent_is_running() {
 }
 
 start_agent() {
+  cd /var/ossec || { log "ERROR: cannot cd /var/ossec"; return 1; }
   log "Starting agent"
   if agent_is_running; then
     "$WAZUH_CONTROL" restart
